@@ -145,7 +145,8 @@ static int fill_contact(struct pcontact_info* ci, struct sip_msg* m, tm_cell_t *
     contact_body_t* cb = NULL;
     struct via_body* vb = NULL;
     struct sip_msg* req = NULL;
-	char* srcip = NULL;
+    str aor;
+    int i = 0;
 
     if(!ci) {
         LM_ERR("called with null ptr\n");
@@ -170,7 +171,16 @@ static int fill_contact(struct pcontact_info* ci, struct sip_msg* m, tm_cell_t *
         ci->via_host = uri.host;
         ci->via_port = uri.port_no ? uri.port_no : 5060;
         ci->via_prot = 0;
-        ci->aor = m->first_line.u.request.uri;
+
+        aor.s = pkg_malloc(m->first_line.u.request.uri.len);
+        if (aor.s == NULL) {
+            LM_ERR("memory allocation failure\n");
+            return -1;
+        }
+        memcpy(aor.s, m->first_line.u.request.uri.s, m->first_line.u.request.uri.len);
+        aor.len = m->first_line.u.request.uri.len;
+
+        //ci->aor = m->first_line.u.request.uri;
         ci->searchflag = SEARCH_NORMAL;
 
 		if(ci->via_host.s == NULL || ci->via_host.len == 0){
@@ -267,7 +277,16 @@ static int fill_contact(struct pcontact_info* ci, struct sip_msg* m, tm_cell_t *
         ci->via_host = vb->host;
         ci->via_port = vb->port;
         ci->via_prot = vb->proto;
-        ci->aor = cb->contacts->uri;
+
+        aor.s = pkg_malloc(cb->contacts->uri.len);
+        if (aor.s == NULL) {
+            LM_ERR("memory allocation failure\n");
+            return -1;
+        }
+        memcpy(aor.s, cb->contacts->uri.s, cb->contacts->uri.len);
+        aor.len = cb->contacts->uri.len;
+
+        //ci->aor = cb->contacts->uri;
         ci->searchflag = SEARCH_RECEIVED;
 
 		if((srcip = pkg_malloc(50)) == NULL) {
@@ -284,6 +303,26 @@ static int fill_contact(struct pcontact_info* ci, struct sip_msg* m, tm_cell_t *
         LM_ERR("Unknown first line type: %d\n", m->first_line.type);
         return -1;
     }
+
+    for (i = 4; i < aor.len; i++)
+        if (aor.s[i] == ';') {
+            aor.len = i;
+            break;
+        }
+
+    LM_DBG("AOR <%.*s>\n", aor.len, aor.s);
+    ci->aor = aor;
+
+    char* srcip = NULL;
+    if((srcip = pkg_malloc(50)) == NULL) {
+        LM_ERR("Error allocating memory for source IP address\n");
+        return -1;
+    }
+
+    ci->received_host.len = ip_addr2sbuf(&req->rcv.src_ip, srcip, 50);
+    ci->received_host.s = srcip;
+    ci->received_port = req->rcv.src_port;
+    ci->received_proto = req->rcv.proto;
 
     LM_DBG("SIP %s fill contact with AOR [%.*s], VIA [%d://%.*s:%d], received_host [%d://%.*s:%d]\n",
             m->first_line.type == SIP_REQUEST ? "REQUEST" : "REPLY",
