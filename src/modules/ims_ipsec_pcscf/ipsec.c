@@ -176,7 +176,7 @@ int add_sa(struct mnl_socket* nl_sock, const struct ip_addr *src_addr_param, con
     // 3GPP TS 33.203 Annex I
     // NOTE: hmac-md5-96 and des-ede3-cbc has been deprecated in Rel12+
 
-    // The cast below is performed because alg_key from struct xfrm_algo is char[0]
+    // The cast below is performed because alg_key from struct xfrm_algo_auth is char[0]
     // The point is to provide a continuous chunk of memory with the key in it
     l_auth_algo = (struct xfrm_algo *)l_auth_algo_buf;
 
@@ -198,27 +198,32 @@ int add_sa(struct mnl_socket* nl_sock, const struct ip_addr *src_addr_param, con
 
     // add encription algorithm for this SA
     l_enc_algo = (struct xfrm_algo *)l_enc_algo_buf;
+    // Set the proper algorithm by r_ealg str
     // cipher_null, des,  des3_ede, aes
-    strcpy(l_enc_algo->alg_name,"cipher_null");
-    if (strncasecmp(r_ealg.s,"aes-cbc",r_ealg.len) == 0) {
+    if (strncasecmp(r_ealg.s, "aes-cbc", r_ealg.len) == 0) {
         LM_DBG("Creating security associations: AES\n");
-        strcpy(l_enc_algo->alg_name,"aes");
+        strcpy(l_enc_algo->alg_name, "aes");
         l_enc_algo->alg_key_len = ck.len * 4;
         string_to_key(l_enc_algo->alg_key, ck);
-    }
-    else if (strncasecmp(r_ealg.s,"des-ede3-cbc",r_ealg.len) == 0) {
+    } else if (strncasecmp(r_ealg.s, "des-ede3-cbc", r_ealg.len) == 0) {
         LM_DBG("Creating security associations: DES, ck.len=%d\n",ck.len);
-        strcpy(l_enc_algo->alg_name,"des3_ede");
+        strcpy(l_enc_algo->alg_name, "des3_ede");
         str ck1;
-        ck1.s = pkg_malloc (128);
-        strncpy(ck1.s,ck.s,32);
-        strncat(ck1.s,ck.s,16);
-        ck1.len=32+16;
+        ck1.s = pkg_malloc(128);
+        strncpy(ck1.s,ck.s, 32);
+        strncat(ck1.s,ck.s, 16);
+        ck1.len = 32 + 16;
 
         l_enc_algo->alg_key_len = ck1.len * 4;
         string_to_key(l_enc_algo->alg_key, ck1);
 
         pkg_free(ck1.s);
+    } else {
+        // set default algorithm to null
+        strcpy(l_enc_algo->alg_name, "cipher_null");
+
+        l_enc_algo->alg_key_len = ck.len * 4;
+        string_to_key(l_enc_algo->alg_key, ck);
     }
 
     mnl_attr_put(l_nlh, XFRMA_ALG_CRYPT, sizeof(struct xfrm_algo) + l_enc_algo->alg_key_len, l_enc_algo);
