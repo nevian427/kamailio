@@ -688,6 +688,7 @@ int ipsec_create(struct sip_msg* m, udomain_t* d, int _cflags)
 {
     pcontact_t* pcontact = NULL;
     struct pcontact_info ci;
+    ip_addr_t ue_ipsec_addr;
     int ret = IPSEC_CMD_FAIL;   // FAIL by default
 	tm_cell_t *t = NULL;
 
@@ -744,7 +745,15 @@ int ipsec_create(struct sip_msg* m, udomain_t* d, int _cflags)
             goto cleanup;
         }
 
-        if(create_ipsec_tunnel(&req->rcv.src_ip, s) != 0){
+        //Convert ipsec address from str to struct ip_addr
+        if(str2ip6buf(&ci.via_host, &ue_ipsec_addr) < 0){
+            LM_ERR("Unable to convert UE IP str to addr6 [%.*s]. Lets try for addr4\n", ci.via_host.len, ci.via_host.s);
+            if(str2ipbuf(&ci.via_host, &ue_ipsec_addr) < 0){
+                LM_ERR("Unable to convert UE IP str to addr4 [%.*s]\n", ci.via_host.len, ci.via_host.s);
+                goto cleanup;
+            }
+        }
+        if(create_ipsec_tunnel(&ue_ipsec_addr, s) != 0){
             goto cleanup;
         }
 
@@ -788,7 +797,15 @@ int ipsec_create(struct sip_msg* m, udomain_t* d, int _cflags)
             goto cleanup;
         }
 
-        if(create_ipsec_tunnel(&req->rcv.src_ip, req_sec_params->data.ipsec) != 0){
+        //Convert ipsec address from str to struct ip_addr
+        if(str2ip6buf(&ci.via_host, &ue_ipsec_addr) < 0){
+            LM_ERR("Unable to convert UE IP str to addr6 [%.*s]. Lets try for addr4\n", ci.via_host.len, ci.via_host.s);
+            if(str2ipbuf(&ci.via_host, &ue_ipsec_addr) < 0){
+                LM_ERR("Unable to convert UE IP str to addr4 [%.*s]\n", ci.via_host.len, ci.via_host.s);
+                goto cleanup;
+            }
+        }
+        if(create_ipsec_tunnel(&ue_ipsec_addr, req_sec_params->data.ipsec) != 0){
             goto cleanup;
         }
 
