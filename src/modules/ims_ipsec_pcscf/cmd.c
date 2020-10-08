@@ -1031,15 +1031,15 @@ int ipsec_forward(struct sip_msg* m, udomain_t* d, int _cflags)
 
     ret = IPSEC_CMD_SUCCESS; // all good, return SUCCESS
 
-	if( m->first_line.type == SIP_REPLY && m->first_line.u.reply.statuscode == 200 &&
-		req->first_line.u.request.method_value == METHOD_REGISTER){
-		if(add_supported_secagree_header(m) != 0){
-			goto cleanup;
-		}
-		if(add_require_secagree_header(m) != 0){
-			goto cleanup;
-		}
-	}
+    if (req->first_line.u.request.method_value == METHOD_REGISTER) {
+        if(add_supported_secagree_header(m) != 0) {
+            goto cleanup;
+        }
+
+        if(add_security_server_header(m, s) != 0) {
+            goto cleanup;
+        }
+    }
 
     ret = IPSEC_CMD_SUCCESS;    // all good, set ret to SUCCESS, and exit
 
