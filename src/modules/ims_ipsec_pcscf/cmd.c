@@ -82,6 +82,24 @@ extern struct tm_binds tmb;
 
 #define IPSEC_CREATE_DELETE_UNUSED_TUNNELS	0x01 /* if set - delete unused tunnels before every registration */
 
+static int pv_t_copy_msg(struct sip_msg *src, struct sip_msg *dst)
+{
+        dst->id = src->id;
+        dst->rcv = src->rcv;
+        dst->set_global_address = src->set_global_address;
+        dst->set_global_port = src->set_global_port;
+        dst->flags = src->flags;
+        dst->fwd_send_flags = src->fwd_send_flags;
+        dst->rpl_send_flags = src->rpl_send_flags;
+        dst->force_send_socket = src->force_send_socket;
+
+        if (parse_msg(dst->buf, dst->len, dst) != 0) {
+                LM_ERR("parse msg failed\n");
+                return -1;
+        }
+        return 0;
+}
+
 int bind_ipsec_pcscf(ipsec_pcscf_api_t* api) {
 	if(!api){
 		LM_ERR("invalid parameter value\n");
@@ -261,7 +279,24 @@ static int fill_contact(struct pcontact_info* ci, struct sip_msg* m, tm_cell_t *
 
         req = t->uas.request;
 
-        cb = cscf_parse_contacts(req);
+        /* Do not use t->uas.request for getting contacts - it has garbage */
+        struct sip_msg req_msg;
+        memset(&req_msg, 0, sizeof(struct sip_msg));
+        req_msg.buf =
+            (char*) pkg_malloc((t->uas.request->len + 1) * sizeof(char));
+        memcpy(req_msg.buf, t->uas.request->buf, t->uas.request->len);
+        req_msg.buf[t->uas.request->len] = '\0';
+        req_msg.len = t->uas.request->len;
+        if (pv_t_copy_msg(t->uas.request, &req_msg) != 0) {
+            pkg_free(req_msg.buf);
+            req_msg.buf = NULL;
+            return -1;
+        }
+        if (req_msg.contact && ((contact_body_t *) req_msg.contact->parsed)) {
+            free_contact((contact_body_t **) &req_msg.contact->parsed);
+        }
+
+        cb = cscf_parse_contacts(&req_msg);
         if (!cb || (!cb->contacts)) {
             LM_ERR("Reply No contact headers\n");
             return -1;
