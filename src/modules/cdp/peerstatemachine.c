@@ -128,8 +128,10 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 		case Wait_Conn_Ack:
 			switch(event){
 				case I_Rcv_Conn_Ack:
-					I_Snd_CER(p);
 					p->state = Wait_I_CEA;
+					I_Snd_CER(p);
+					if (p->state == Closed)
+						sm_process(p, Start, 0, 1, 0);
 					break;
 				case I_Rcv_Conn_NAck:
 					Cleanup(p,p->I_sock);
@@ -624,15 +626,23 @@ void I_Snd_CER(peer *p)
 	} addr_u ;
 	socklen_t addrlen;
 	char x[18];
+	int ret = 0;
 
 	cer = AAANewMessage(Code_CE,0,0,0);
 	if (!cer) return;
 	cer->hopbyhopId = next_hopbyhop();
 	cer->endtoendId = next_endtoend();
 	addrlen = sizeof(addr_u);
-	if (getsockname(p->I_sock,&(addr_u.addr), &addrlen) == -1) {
+	if ((ret = getsockname(p->I_sock,&(addr_u.addr), &addrlen)) == -1) {
 		LM_ERR("I_Snd_CER(): Error on finding local host address > %s\n",strerror(errno));
-	}else{
+
+		Cleanup(p,p->I_sock);
+		p->state = Closed;
+		AAAFreeMessage(&cer);
+		return;
+	}
+
+	if (ret != -1) {
 		switch(addr_u.addr.sa_family){
 			case AF_INET:
 				set_2bytes(x,1);
