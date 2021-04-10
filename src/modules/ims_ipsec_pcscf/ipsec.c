@@ -821,8 +821,8 @@ static int delete_unused_sa_cb(const struct nlmsghdr *nlh, void *data)
     release_spi(ipsec.spi_ps);
 
     // Release the client and the server ports
-    release_cport(ipsec.port_pc);
-    release_sport(ipsec.port_ps);
+    // release_cport(ipsec.port_pc);
+    // release_sport(ipsec.port_ps);
 
     return MNL_CB_OK;
 }

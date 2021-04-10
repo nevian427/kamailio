@@ -93,34 +93,41 @@ uint32_t acquire_port(spi_list_t* used_ports, pthread_mutex_t* port_mut, uint32_
         return ret;
     }
 
-    while(1){
-        if(spi_in_list(used_ports, *port_val) == 0) {
-            ret = *port_val;
-            (*port_val)++;
+	if(*port_val >= max_port) { //reached the top of the range - reset
+		*port_val = min_port;
+	}
+	ret = *port_val;
+	(*port_val)++;
 
-			if(*port_val >= max_port) { //reached the top of the range - reset
-				*port_val = min_port;
-			}
+	// The below code is commented because we want to re-use the ports but with different SA and Policies
+    // while(1){
+    //     if(spi_in_list(used_ports, *port_val) == 0) {
+    //         ret = *port_val;
+    //         (*port_val)++;
 
-            break;
-        }
+	// 		if(*port_val >= max_port) { //reached the top of the range - reset
+	// 			*port_val = min_port;
+	// 		}
 
-        (*port_val)++; //the current server port is not available - increment
+    //         break;
+    //     }
 
-        if(*port_val >= max_port) { //reached the top of the range - reset
-            *port_val = min_port;
-        }
+    //     (*port_val)++; //the current server port is not available - increment
 
-        if(*port_val == initial_val) { //there are no free server ports
-            pthread_mutex_unlock(port_mut);
-            return ret;
-        }
-    }
+    //     if(*port_val >= max_port) { //reached the top of the range - reset
+    //         *port_val = min_port;
+    //     }
 
-    // found unused server port - add it to the used list
-    if(spi_add(used_ports, ret) != 0) {
-        ret = 0;
-    }
+    //     if(*port_val == initial_val) { //there are no free server ports
+    //         pthread_mutex_unlock(port_mut);
+    //         return ret;
+    //     }
+    // }
+
+    // // found unused server port - add it to the used list
+    // if(spi_add(used_ports, ret) != 0) {
+    //     ret = 0;
+    // }
 
     pthread_mutex_unlock(port_mut);
     return ret;

@@ -465,7 +465,7 @@ static int update_contact_ipsec_params(ipsec_t* s, const struct sip_msg* m, int 
             shm_free(s->ik.s);
             s->ik.s = NULL; s->ik.len = 0;
 
-            release_cport(s->port_pc);
+            // release_cport(s->port_pc);
 
             release_spi(s->spi_pc);
             release_spi(s->spi_ps);
@@ -624,8 +624,9 @@ static int destroy_ipsec_tunnel(str remote_addr, ipsec_t* s, unsigned short rece
 
     if (release_proxy_ports) {
         // Release the client and the server ports
-        release_cport(s->port_pc);
-        release_sport(s->port_ps);
+        // Do not release proxy IPSec ports at all just remove SA and Policies
+        // release_cport(s->port_pc);
+        // release_sport(s->port_ps);
     }
 
     close_mnl_socket(sock);
@@ -1248,7 +1249,7 @@ int ipsec_reconfig()
 	}
 
 	clean_spi_list();
-	clean_port_lists();
+	// clean_port_lists();
 
 	LM_DBG("Clean all ipsec tunnels\n");
 
