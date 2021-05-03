@@ -163,6 +163,7 @@ static int fill_contact(struct pcontact_info* ci, struct sip_msg* m, tm_cell_t *
     contact_body_t* cb = NULL;
     struct via_body* vb = NULL;
     struct sip_msg* req = NULL;
+    char* srcip = NULL;
     str aor;
     int i = 0;
 
@@ -348,17 +349,6 @@ static int fill_contact(struct pcontact_info* ci, struct sip_msg* m, tm_cell_t *
     LM_DBG("AOR <%.*s>\n", aor.len, aor.s);
     ci->aor = aor;
 
-    char* srcip = NULL;
-    if((srcip = pkg_malloc(50)) == NULL) {
-        LM_ERR("Error allocating memory for source IP address\n");
-        return -1;
-    }
-
-    ci->received_host.len = ip_addr2sbuf(&req->rcv.src_ip, srcip, 50);
-    ci->received_host.s = srcip;
-    ci->received_port = req->rcv.src_port;
-    ci->received_proto = req->rcv.proto;
-
     LM_DBG("SIP %s fill contact with AOR [%.*s], VIA [%d://%.*s:%d], received_host [%d://%.*s:%d]\n",
             m->first_line.type == SIP_REQUEST ? "REQUEST" : "REPLY",
             ci->aor.len, ci->aor.s, ci->via_prot, ci->via_host.len, ci->via_host.s, ci->via_port,
@@ -512,45 +502,45 @@ static int create_ipsec_tunnel(const struct ip_addr *remote_addr, ipsec_t* s)
 
     // SA1 UE client to P-CSCF server
     //               src adrr     dst addr     src port    dst port
-    add_sa    (sock, remote_addr, &ipsec_addr, s->port_uc, s->port_ps, s->spi_ps, s->ck, s->ik, s->r_alg, s->r_ealg);
-    add_policy(sock, remote_addr, &ipsec_addr, s->port_uc, s->port_ps, s->spi_ps, IPSEC_POLICY_DIRECTION_IN);
+    add_sa    (sock, remote_addr, ipsec_addr, s->port_uc, s->port_ps, s->spi_ps, s->ck, s->ik, s->r_alg, s->r_ealg);
+    add_policy(sock, remote_addr, ipsec_addr, s->port_uc, s->port_ps, s->spi_ps, IPSEC_POLICY_DIRECTION_IN);
 
     // SA2 P-CSCF client to UE server
     //               src adrr     dst addr     src port           dst port
-    add_sa    (sock, &ipsec_addr, remote_addr, s->port_pc, s->port_us, s->spi_us, s->ck, s->ik, s->r_alg, s->r_ealg);
-    add_policy(sock, &ipsec_addr, remote_addr, s->port_pc, s->port_us, s->spi_us, IPSEC_POLICY_DIRECTION_OUT);
+    add_sa    (sock, ipsec_addr, remote_addr, s->port_pc, s->port_us, s->spi_us, s->ck, s->ik, s->r_alg, s->r_ealg);
+    add_policy(sock, ipsec_addr, remote_addr, s->port_pc, s->port_us, s->spi_us, IPSEC_POLICY_DIRECTION_OUT);
 
     // SA3 P-CSCF server to UE client
     //               src adrr     dst addr     src port           dst port
-    add_sa    (sock, &ipsec_addr, remote_addr, s->port_ps, s->port_uc, s->spi_uc, s->ck, s->ik, s->r_alg, s->r_ealg);
-    add_policy(sock, &ipsec_addr, remote_addr, s->port_ps, s->port_uc, s->spi_uc, IPSEC_POLICY_DIRECTION_OUT);
+    add_sa    (sock, ipsec_addr, remote_addr, s->port_ps, s->port_uc, s->spi_uc, s->ck, s->ik, s->r_alg, s->r_ealg);
+    add_policy(sock, ipsec_addr, remote_addr, s->port_ps, s->port_uc, s->spi_uc, IPSEC_POLICY_DIRECTION_OUT);
 
     // SA4 UE server to P-CSCF client
     //               src adrr     dst addr     src port    dst port
-    add_sa    (sock, remote_addr, &ipsec_addr, s->port_us, s->port_pc, s->spi_pc, s->ck, s->ik, s->r_alg, s->r_ealg);
-    add_policy(sock, remote_addr, &ipsec_addr, s->port_us, s->port_pc, s->spi_pc, IPSEC_POLICY_DIRECTION_IN);
+    add_sa    (sock, remote_addr, ipsec_addr, s->port_us, s->port_pc, s->spi_pc, s->ck, s->ik, s->r_alg, s->r_ealg);
+    add_policy(sock, remote_addr, ipsec_addr, s->port_us, s->port_pc, s->spi_pc, IPSEC_POLICY_DIRECTION_IN);
 
     /* Fix for some broken In-Dialog routing */
 
     // SA5 UE client to P-CSCF client
     //               src adrr     dst addr     src port    dst port
-    add_sa    (sock, remote_addr, &ipsec_addr, s->port_uc, s->port_pc, s->spi_ps, s->ck, s->ik, s->r_alg, s->r_ealg);
-    add_policy(sock, remote_addr, &ipsec_addr, s->port_uc, s->port_pc, s->spi_ps, IPSEC_POLICY_DIRECTION_IN);
+    add_sa    (sock, remote_addr, ipsec_addr, s->port_uc, s->port_pc, s->spi_ps, s->ck, s->ik, s->r_alg, s->r_ealg);
+    add_policy(sock, remote_addr, ipsec_addr, s->port_uc, s->port_pc, s->spi_ps, IPSEC_POLICY_DIRECTION_IN);
 
     // SA6 P-CSCF client to UE client
     //               src adrr     dst addr     src port    dst port
-    add_sa    (sock, &ipsec_addr, remote_addr, s->port_pc, s->port_uc, s->spi_us, s->ck, s->ik, s->r_alg, s->r_ealg);
-    add_policy(sock, &ipsec_addr, remote_addr, s->port_pc, s->port_uc, s->spi_us, IPSEC_POLICY_DIRECTION_OUT);
+    add_sa    (sock, ipsec_addr, remote_addr, s->port_pc, s->port_uc, s->spi_us, s->ck, s->ik, s->r_alg, s->r_ealg);
+    add_policy(sock, ipsec_addr, remote_addr, s->port_pc, s->port_uc, s->spi_us, IPSEC_POLICY_DIRECTION_OUT);
 
     // SA7 P-CSCF server to UE server
     //               src adrr     dst addr     src port    dst port
-    add_sa    (sock, &ipsec_addr, remote_addr, s->port_ps, s->port_us, s->spi_uc, s->ck, s->ik, s->r_alg, s->r_ealg);
-    add_policy(sock, &ipsec_addr, remote_addr, s->port_ps, s->port_us, s->spi_uc, IPSEC_POLICY_DIRECTION_OUT);
+    add_sa    (sock, ipsec_addr, remote_addr, s->port_ps, s->port_us, s->spi_uc, s->ck, s->ik, s->r_alg, s->r_ealg);
+    add_policy(sock, ipsec_addr, remote_addr, s->port_ps, s->port_us, s->spi_uc, IPSEC_POLICY_DIRECTION_OUT);
 
     // SA8 UE server to P-CSCF server
     //               src adrr     dst addr     src port    dst port
-    add_sa    (sock, remote_addr, &ipsec_addr, s->port_us, s->port_ps, s->spi_pc, s->ck, s->ik, s->r_alg, s->r_ealg);
-    add_policy(sock, remote_addr, &ipsec_addr, s->port_us, s->port_ps, s->spi_pc, IPSEC_POLICY_DIRECTION_IN);
+    add_sa    (sock, remote_addr, ipsec_addr, s->port_us, s->port_ps, s->spi_pc, s->ck, s->ik, s->r_alg, s->r_ealg);
+    add_policy(sock, remote_addr, ipsec_addr, s->port_us, s->port_ps, s->spi_pc, IPSEC_POLICY_DIRECTION_IN);
 
     close_mnl_socket(sock);
 
@@ -1215,7 +1205,7 @@ int ipsec_destroy_by_contact(udomain_t* _d, str * uri, str * received_host, int 
     search_ci.aor.len = uri->len;
     search_ci.reg_state = PCONTACT_ANY;
 
-    if (ul.get_pcontact(_d, &search_ci, &pcontact) != 0) {
+    if (ul.get_pcontact(_d, &search_ci, &pcontact, 0) != 0) {
         LM_ERR("Contact doesn't exist\n");
         return ret;
     }
