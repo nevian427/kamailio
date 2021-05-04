@@ -763,9 +763,11 @@ int tel2sip(struct sip_msg* _msg, char* _uri, char* _hostpart, char* _res)
         /* get parameters */
         if (get_str_fparam(&uri, _msg, (fparam_t*)_uri) < 0) {
                 LM_ERR("failed to get uri value\n");
+			return -1;
         }
         if (get_str_fparam(&hostpart, _msg, (fparam_t*)_hostpart) < 0) {
                 LM_ERR("failed to get hostpart value\n");
+			return -1;
         }
         res = (pv_spec_t *)_res;
 
