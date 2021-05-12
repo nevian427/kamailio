@@ -203,8 +203,13 @@ int process_contact(udomain_t * _d, int expires, str contact_uri, int contact_st
         if (contact_state == STATE_TERMINATED) {
             //delete contact
             LM_DBG("This contact <%.*s> is in state terminated and is in usrloc so removing it from usrloc\n", contact_uri.len, contact_uri.s);
-            if (ul.delete_pcontact(_d, pcontact) != 0) {
-                LM_DBG("failed to delete pcscf contact <%.*s> - not a problem this may have been removed by de registration", contact_uri.len, contact_uri.s);
+            // if (ul.delete_pcontact(_d, pcontact) != 0) {
+            //     LM_DBG("failed to delete pcscf contact <%.*s> - not a problem this may have been removed by de registration", contact_uri.len, contact_uri.s);
+            // }
+            // Rather than delete update the pcontact with expire value of 10 seconds
+            ci.expires = local_time_now + 10;
+            if (ul.update_pcontact(_d, &ci, pcontact) != 0) {
+                LM_DBG("failed to update pcscf contact on de-register\n");
             }
             /*TODO_LATEST - put this back */
         } else {//state is active
