@@ -956,6 +956,8 @@ int ipsec_forward(struct sip_msg* m, udomain_t* d, int _cflags)
     unsigned short dst_port = 0;
     unsigned short src_port = 0;
     ip_addr_t via_host;
+    struct via_body *vb;
+
     struct sip_msg* req = NULL;
 
     if(m->first_line.type == SIP_REPLY) {
@@ -1021,10 +1023,11 @@ int ipsec_forward(struct sip_msg* m, udomain_t* d, int _cflags)
         m->dst_uri.len = 0;
     }
 
+    vb = cscf_get_last_via(m);
+
     char buf[1024];
     if(m->first_line.type == SIP_REPLY){
-        // for Reply get the dest proto from the received request
-        dst_proto = req->rcv.proto;
+        dst_proto = vb ? vb->proto : req->rcv.proto;
 
         // As per ETSI TS 133 203 V11.2.0, 7.1 Security association parameters
         // https://tools.ietf.org/html/rfc3261#section-18
@@ -1046,7 +1049,7 @@ int ipsec_forward(struct sip_msg* m, udomain_t* d, int _cflags)
             // for Request get the dest proto from the saved contact
             dst_proto = pcontact->received_proto;
         } else {
-            dst_proto = m->rcv.proto;
+            dst_proto = vb ? vb->proto : m->rcv.proto;
         }
 
         // for Request sends from P-CSCF client port
@@ -1056,7 +1059,14 @@ int ipsec_forward(struct sip_msg* m, udomain_t* d, int _cflags)
         dst_port = s->port_us;
     }
 
-    int buf_len = snprintf(buf, sizeof(buf) - 1, "sip:%.*s:%d", ci.via_host.len, ci.via_host.s, dst_port);
+    int buf_len = 0;
+    if (dst_proto == PROTO_TCP) {
+        buf_len = snprintf(buf, sizeof(buf) - 1, "sip:%.*s:%d;transport=tcp", ci.via_host.len, ci.via_host.s, dst_port);
+    } else if (dst_proto == PROTO_TLS) {
+        buf_len = snprintf(buf, sizeof(buf) - 1, "sip:%.*s:%d;transport=tls", ci.via_host.len, ci.via_host.s, dst_port);
+    } else {
+        buf_len = snprintf(buf, sizeof(buf) - 1, "sip:%.*s:%d", ci.via_host.len, ci.via_host.s, dst_port);
+    }
 
     if((m->dst_uri.s = pkg_malloc(buf_len + 1)) == NULL) {
         LM_ERR("Error allocating memory for dst_uri\n");
@@ -1102,7 +1112,7 @@ int ipsec_forward(struct sip_msg* m, udomain_t* d, int _cflags)
         t->uas.response.dst = dst_info;
     }
 
-	LM_DBG("Destination changed to [%d://%.*s], from [%d:%d]\n", dst_info.proto, m->dst_uri.len, m->dst_uri.s,
+	LM_INFO("Destination changed to [%d://%.*s], from [%d:%d]\n", dst_info.proto, m->dst_uri.len, m->dst_uri.s,
 			dst_info.send_sock->proto, dst_info.send_sock->port_no);
 
     ret = IPSEC_CMD_SUCCESS; // all good, return SUCCESS
