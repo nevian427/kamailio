@@ -1059,6 +1059,13 @@ int ipsec_forward(struct sip_msg* m, udomain_t* d, int _cflags)
         dst_port = s->port_us;
     }
 
+    // Try for send socket
+    struct socket_info * client_sock = grep_sock_info(via_host.af == AF_INET ? &ipsec_listen_addr : &ipsec_listen_addr6, src_port, dst_proto);
+    if(!client_sock && dst_proto == PROTO_UDP) {
+        LM_ERR("UDP socket not found for IPSec forward, trying for TCP\n");
+        dst_proto = PROTO_TCP;
+    }
+
     int buf_len = 0;
     if (dst_proto == PROTO_TCP) {
         buf_len = snprintf(buf, sizeof(buf) - 1, "sip:%.*s:%d;transport=tcp", ci.via_host.len, ci.via_host.s, dst_port);
@@ -1078,7 +1085,7 @@ int ipsec_forward(struct sip_msg* m, udomain_t* d, int _cflags)
     m->dst_uri.s[m->dst_uri.len] = '\0';
 
     // Set send socket
-    struct socket_info * client_sock = grep_sock_info(via_host.af == AF_INET ? &ipsec_listen_addr : &ipsec_listen_addr6, src_port, dst_proto);
+    client_sock = grep_sock_info(via_host.af == AF_INET ? &ipsec_listen_addr : &ipsec_listen_addr6, src_port, dst_proto);
     if(!client_sock) {
         LM_ERR("Error calling grep_sock_info() for ipsec client port\n");
         goto cleanup;
