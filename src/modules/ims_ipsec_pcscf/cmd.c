@@ -1041,7 +1041,7 @@ int ipsec_forward(struct sip_msg* m, udomain_t* d, int _cflags)
         // dst_port = dst_proto == PROTO_TCP ? s->port_uc : s->port_us;
 
         // From P-CSCF client port
-        src_port = s->port_pc;
+        src_port = dst_proto == PROTO_TCP ? req->rcv.dst_port : s->port_pc;
 
         if (vb && ((vb->port == s->port_uc) || (vb->port == s->port_us))) {
             dst_port = vb->port;
