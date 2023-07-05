@@ -762,7 +762,7 @@ int ipsec_create(struct sip_msg* m, udomain_t* d, int _cflags)
     pcontact_t* pcontact = NULL;
     struct pcontact_info ci;
     int ret = IPSEC_CMD_FAIL;   // FAIL by default
-	tm_cell_t *t = NULL;
+    tm_cell_t *t = 0;
 
     if(m->first_line.type == SIP_REPLY) {
         t = tmb.t_gett();
@@ -965,12 +965,12 @@ int ipsec_forward(struct sip_msg* m, udomain_t* d, int _cflags)
     unsigned short src_port = 0;
     ip_addr_t via_host;
     struct via_body *vb;
+    tm_cell_t *t = 0;
 
     struct sip_msg* req = NULL;
 
     if(m->first_line.type == SIP_REPLY) {
         // Get request from reply
-        tm_cell_t *t = 0;
         t = tmb.t_gett();
         if (t == NULL || t == T_UNDEFINED) {
             LM_ERR("Error getting transaction\n");
@@ -1176,7 +1176,7 @@ int ipsec_destroy(struct sip_msg* m, udomain_t* d)
     struct pcontact_info ci;
     pcontact_t* pcontact = NULL;
     int ret = IPSEC_CMD_FAIL; // FAIL by default
-	tm_cell_t *t = NULL;
+    tm_cell_t *t = 0;
 
     if(m->first_line.type == SIP_REPLY) {
         t = tmb.t_gett();
